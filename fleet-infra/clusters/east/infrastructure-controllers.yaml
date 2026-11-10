@@ -22,7 +22,9 @@ spec:
           path: /spec/values
           value:
             k8gb:
-              dnsZones: []
+              dnsZones:
+                - loadBalancedZone: "local.example.com"
+                  parentZone: "example.com"
               edgeDNSServers:
                 - "172.28.0.2"
               clusterGeoTag: "east"
