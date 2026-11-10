@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: web-app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-template
+  namespace: web-app
+data:
+  index.html.template: |
+    Running in region: ${REGION}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+  namespace: web-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        env: []
+        # Substitute variables into index.html, then start Nginx
+        command:
+        - /bin/sh
+        - -c
+        - |
+          envsubst '${CUSTOM_TITLE} ${GREETING_MESSAGE} ${REGION}' < /etc/nginx/templates/index.html.template > /usr/share/nginx/html/index.html && exec nginx -g 'daemon off;'
+        volumeMounts:
+        - name: template-volume
+          mountPath: /etc/nginx/templates
+        - name: web-root
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: template-volume
+        configMap:
+          name: nginx-template
+      - name: web-root
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app
+  namespace: web-app
+spec:
+  type: ClusterIP
+  selector:
+    app: web-app
+  ports:
+  - port: 80
+    targetPort: 80

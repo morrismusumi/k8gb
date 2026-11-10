@@ -1,0 +1,51 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-controllers
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: infra-core
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/controllers
+  prune: true
+  wait: true
+  patches:
+    - patch: |
+        - op: add
+          path: /spec/values
+          value:
+            k8gb:
+              dnsZones:
+                - loadBalancedZone: "local.example.com" # -- dnsZone controlled by gslb
+                  parentZone: "example.com" # -- main zone which would contain gslb zone to delegate
+              edgeDNSServers:
+                - "172.28.0.2" # use this DNS server as a main resolver to enable cross k8gb DNS based communication
+              clusterGeoTag: "east" # used for places where we need to distinguish between differnet Gslb instances
+              extGslbClustersGeoTags: "west" # comma-separated list of external gslb geo tags to pair with
+            extdns:
+              enabled: false
+              domainFilters:
+              - "example.com"
+              txtPrefix: "k8gb-local-east-"
+              txtOwnerId: "k8gb-Z02-local-east"
+              policy: sync
+              provider:
+                name: coredns
+              env:
+              - name: ETCD_URLS
+                value: "http://172.18.0.2:2379"
+            coredns:
+              serviceType: LoadBalancer
+              service:
+                annotations:
+                  kube-vip.io/loadbalancerIPs: 172.19.0.100
+      target:
+        kind: HelmRelease
+        name: k8gb

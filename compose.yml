@@ -1,0 +1,31 @@
+services:
+  edge-dns:
+    image: mvance/unbound:latest
+    container_name: edge-dns
+    volumes:
+      - ./edge-dns/unbound.conf:/opt/unbound/etc/unbound/unbound.conf:ro
+    ports:
+      - "5301:53/udp"
+      - "5301:53/tcp"
+    networks:
+      dns-network:
+        ipv4_address: 172.28.0.2
+
+  netshoot:
+    container_name: netshoot
+    image: nicolaka/netshoot:latest
+    command: ["sleep", "infinity"]
+    dns:
+      - 172.28.0.2
+    depends_on:
+      - edge-dns
+    networks:
+      dns-network:
+        ipv4_address: 172.28.0.10
+
+networks:
+  dns-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
