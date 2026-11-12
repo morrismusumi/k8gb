@@ -13,7 +13,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./apps
+  path: ./fleet-infra/apps
   prune: true
   patches:
     - patch: |
